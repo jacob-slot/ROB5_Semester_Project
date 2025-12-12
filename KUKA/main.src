@@ -1,0 +1,281 @@
+&ACCESS RVP
+&REL 34
+&PARAM EDITMASK = *
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM DISKPATH = KRC:\R1\Program
+DEF main( )
+  ;FOLD BASISTECH INI
+    GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM ( )
+    INTERRUPT ON 3 
+    BAS (#INITMOV,0 )
+  ;ENDFOLD (BASISTECH INI)
+  ;FOLD USER INI
+    ;Make your modifications here
+
+  ;ENDFOLD (USER INI)
+;reset variables
+
+;FOLD OUT 1 'bFixtureArrival' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=1; Kuka.Logics.IoName=bFixtureArrival; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[1] = False
+;ENDFOLD
+;FOLD OUT 2 'bWaitState' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=2; Kuka.Logics.IoName=bWaitState; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[2] = False
+;ENDFOLD
+;FOLD OUT 3 'bDropOff' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=3; Kuka.Logics.IoName=bDropOff; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[3] = False
+;ENDFOLD
+;DECLARE INTERUPT
+INTERRUPT DECL 1 WHEN $IN[1] DO Interrupt_prog()
+
+LOOP
+
+;wait for start signal
+;FOLD WAIT FOR ( IN 2 'bStart' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=2; Kuka.WaitForIndexName2.Term1=bStart; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[2] )
+;ENDFOLD
+;Move to approach
+;FOLD SPTP P_appnew Vel=100 % PDAT22 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_appnew; Kuka.BlendingEnabled=False; Kuka.MoveDataPtpName=PDAT22; Kuka.VelocityPtp=100; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SPTP
+;ENDFOLD
+SPTP XP_appnew WITH $VEL_AXIS[1] = SVEL_JOINT(100.0), $TOOL = STOOL2(FP_appnew), $BASE = SBASE(FP_appnew.BASE_NO), $IPO_MODE = SIPO_MODE(FP_appnew.IPO_FRAME), $LOAD = SLOAD(FP_appnew.TOOL_NO), $ACC_AXIS[1] = SACC_JOINT(PPDAT22), $APO = SAPO_PTP(PPDAT22), $GEAR_JERK[1] = SGEAR_JERK(PPDAT22), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;Move linearly towards plates untill interrupt sig
+LIN_APPROACH()
+;FOLD WAIT FOR ( IN 1 'bVacState' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=1; Kuka.WaitForIndexName2.Term1=bVacState; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[1] )
+;ENDFOLD
+;Move to approach
+;FOLD LIN P_appnew Vel=1 m/s CPDAT21 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.old; Kuka.IsGlobalPoint=False; Kuka.PointName=P_appnew; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT21; Kuka.VelocityPath=1; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=LIN
+;ENDFOLD
+$BWDSTART = FALSE
+LDAT_ACT = LCPDAT21
+FDAT_ACT = FP_appnew
+BAS(#CP_PARAMS, 1.0)
+SET_CD_PARAMS (0)
+LIN XP_appnew
+;ENDFOLD
+;Go to fixture approach via T1
+;FOLD SLIN P_T1 CONT Vel=1 m/s CPDAT16 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_T1; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT16; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_T1 WITH $VEL = SVEL_CP(1.0, , LCPDAT16), $TOOL = STOOL2(FP_T1), $BASE = SBASE(FP_T1.BASE_NO), $IPO_MODE = SIPO_MODE(FP_T1.IPO_FRAME), $LOAD = SLOAD(FP_T1.TOOL_NO), $ACC = SACC_CP(LCPDAT16), $ORI_TYPE = SORI_TYP(LCPDAT16), $APO = SAPO(LCPDAT16), $JERK = SJERK(LCPDAT16), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;ENDFOLD
+;FOLD SLIN P_fApp Vel=1 m/s CPDAT11 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fApp; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT11; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fApp WITH $VEL = SVEL_CP(1.0, , LCPDAT11), $TOOL = STOOL2(FP_fApp), $BASE = SBASE(FP_fApp.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fApp.IPO_FRAME), $LOAD = SLOAD(FP_fApp.TOOL_NO), $ACC = SACC_CP(LCPDAT11), $ORI_TYPE = SORI_TYP(LCPDAT11), $APO = SAPO(LCPDAT11), $JERK = SJERK(LCPDAT11), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;move slowlz towards fixture(to drop it)
+;FOLD SLIN P_f Vel=0.25 m/s CPDAT7 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_f; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT7; Kuka.VelocityPath=0.25; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_f WITH $VEL = SVEL_CP(0.25, , LCPDAT7), $TOOL = STOOL2(FP_f), $BASE = SBASE(FP_f.BASE_NO), $IPO_MODE = SIPO_MODE(FP_f.IPO_FRAME), $LOAD = SLOAD(FP_f.TOOL_NO), $ACC = SACC_CP(LCPDAT7), $ORI_TYPE = SORI_TYP(LCPDAT7), $APO = SAPO(LCPDAT7), $JERK = SJERK(LCPDAT7), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;Tell IPC that robot arrived
+;FOLD OUT 1 'bFixtureArrival' State=True  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=1; Kuka.Logics.IoName=bFixtureArrival; Kuka.Logics.State=True; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[1] = True
+;ENDFOLD
+;Wait for vacvum to turn off(and reset bFixtureArr.)
+;FOLD WAIT FOR ( IN 4 'bDropOffOk' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=4; Kuka.WaitForIndexName2.Term1=bDropOffOk; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[4] )
+;ENDFOLD
+;FOLD OUT 1 'bFixtureArrival' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=1; Kuka.Logics.IoName=bFixtureArrival; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[1] = False
+;ENDFOLD
+;Go to waiting position via approach
+;FOLD SLIN P_fApp CONT Vel=1 m/s CPDAT10 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fApp; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT10; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fApp WITH $VEL = SVEL_CP(1.0, , LCPDAT10), $TOOL = STOOL2(FP_fApp), $BASE = SBASE(FP_fApp.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fApp.IPO_FRAME), $LOAD = SLOAD(FP_fApp.TOOL_NO), $ACC = SACC_CP(LCPDAT10), $ORI_TYPE = SORI_TYP(LCPDAT10), $APO = SAPO(LCPDAT10), $JERK = SJERK(LCPDAT10), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;ENDFOLD
+;FOLD SLIN P_fWait Vel=1 m/s CPDAT9 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fWait; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT9; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fWait WITH $VEL = SVEL_CP(1.0, , LCPDAT9), $TOOL = STOOL2(FP_fWait), $BASE = SBASE(FP_fWait.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fWait.IPO_FRAME), $LOAD = SLOAD(FP_fWait.TOOL_NO), $ACC = SACC_CP(LCPDAT9), $ORI_TYPE = SORI_TYP(LCPDAT9), $APO = SAPO(LCPDAT9), $JERK = SJERK(LCPDAT9), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;FOLD OUT 2 'bWaitState' State=True  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=2; Kuka.Logics.IoName=bWaitState; Kuka.Logics.State=True; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[2] = True
+;ENDFOLD
+;Wait for laser to be done adn reset variable
+;FOLD WAIT FOR ( IN 3 'bLaserDone' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=3; Kuka.WaitForIndexName2.Term1=bLaserDone; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[3] )
+;ENDFOLD
+;FOLD OUT 2 'bWaitState' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=2; Kuka.Logics.IoName=bWaitState; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[2] = False
+;ENDFOLD
+;Go to grabbing position via fixture approach
+;FOLD SLIN P_fApp CONT Vel=1 m/s CPDAT12 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fApp; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT12; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fApp WITH $VEL = SVEL_CP(1.0, , LCPDAT12), $TOOL = STOOL2(FP_fApp), $BASE = SBASE(FP_fApp.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fApp.IPO_FRAME), $LOAD = SLOAD(FP_fApp.TOOL_NO), $ACC = SACC_CP(LCPDAT12), $ORI_TYPE = SORI_TYP(LCPDAT12), $APO = SAPO(LCPDAT12), $JERK = SJERK(LCPDAT12), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;ENDFOLD
+;FOLD SLIN P_fGrab Vel=0.25 m/s CPDAT13 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fGrab; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT13; Kuka.VelocityPath=0.25; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fGrab WITH $VEL = SVEL_CP(0.25, , LCPDAT13), $TOOL = STOOL2(FP_fGrab), $BASE = SBASE(FP_fGrab.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fGrab.IPO_FRAME), $LOAD = SLOAD(FP_fGrab.TOOL_NO), $ACC = SACC_CP(LCPDAT13), $ORI_TYPE = SORI_TYP(LCPDAT13), $APO = SAPO(LCPDAT13), $JERK = SJERK(LCPDAT13), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;Send arrival and wait for vacuum seal
+;FOLD OUT 1 'bFixtureArrival' State=True  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=1; Kuka.Logics.IoName=bFixtureArrival; Kuka.Logics.State=True; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[1] = True
+;ENDFOLD
+;FOLD WAIT FOR ( IN 1 'bVacState' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=1; Kuka.WaitForIndexName2.Term1=bVacState; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[1] )
+;ENDFOLD
+;Reset variable
+;FOLD OUT 1 'bFixtureArrival' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=1; Kuka.Logics.IoName=bFixtureArrival; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[1] = False
+;ENDFOLD
+;Go to dropoff via fApp and T3
+;FOLD SLIN P_fApp Vel=0.25 m/s CPDAT14 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_fApp; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT14; Kuka.VelocityPath=0.25; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_fApp WITH $VEL = SVEL_CP(0.25, , LCPDAT14), $TOOL = STOOL2(FP_fApp), $BASE = SBASE(FP_fApp.BASE_NO), $IPO_MODE = SIPO_MODE(FP_fApp.IPO_FRAME), $LOAD = SLOAD(FP_fApp.TOOL_NO), $ACC = SACC_CP(LCPDAT14), $ORI_TYPE = SORI_TYP(LCPDAT14), $APO = SAPO(LCPDAT14), $JERK = SJERK(LCPDAT14), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;;FOLD SLIN P_T3 CONT Vel=2 m/s CPDAT17 Tool[1] Base[0] ;%{PE}
+;;FOLD Parameters ;%{h}
+;;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_T3; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT17; Kuka.VelocityPath=2; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;;ENDFOLD
+;SLIN XP_T3 WITH $VEL = SVEL_CP(2.0, , LCPDAT17), $TOOL = STOOL2(FP_T3), $BASE = SBASE(FP_T3.BASE_NO), $IPO_MODE = SIPO_MODE(FP_T3.IPO_FRAME), $LOAD = SLOAD(FP_T3.TOOL_NO), $ACC = SACC_CP(LCPDAT17), $ORI_TYPE = SORI_TYP(LCPDAT17), $APO = SAPO(LCPDAT17), $JERK = SJERK(LCPDAT17), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;;ENDFOLD
+;FOLD SLIN P_tDrop CONT Vel=1 m/s CPDAT31 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_tDrop; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT31; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_tDrop WITH $VEL = SVEL_CP(1.0, , LCPDAT31), $TOOL = STOOL2(FP_tDrop), $BASE = SBASE(FP_tDrop.BASE_NO), $IPO_MODE = SIPO_MODE(FP_tDrop.IPO_FRAME), $LOAD = SLOAD(FP_tDrop.TOOL_NO), $ACC = SACC_CP(LCPDAT31), $ORI_TYPE = SORI_TYP(LCPDAT31), $APO = SAPO(LCPDAT31), $JERK = SJERK(LCPDAT31), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;ENDFOLD
+;FOLD SLIN P_drop Vel=1 m/s CPDAT15 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_drop; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT15; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_drop WITH $VEL = SVEL_CP(1.0, , LCPDAT15), $TOOL = STOOL2(FP_drop), $BASE = SBASE(FP_drop.BASE_NO), $IPO_MODE = SIPO_MODE(FP_drop.IPO_FRAME), $LOAD = SLOAD(FP_drop.TOOL_NO), $ACC = SACC_CP(LCPDAT15), $ORI_TYPE = SORI_TYP(LCPDAT15), $APO = SAPO(LCPDAT15), $JERK = SJERK(LCPDAT15), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+;Send dropoff arrival bool to IPC
+;FOLD OUT 3 'bDropOff' State=True  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=3; Kuka.Logics.IoName=bDropOff; Kuka.Logics.State=True; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[3] = True
+;ENDFOLD
+;Wait for vacuum seal and reset variable
+;FOLD WAIT FOR ( IN 4 'bDropOffOk' )  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.waitfor; Kuka.WaitLogicTerm1=None; Kuka.WaitForNot1=False; Kuka.WaitLogicOp2.Term1=None; Kuka.WaitForNot2.Term1=False; Kuka.WaitForSysVar2.Term1=IN; Kuka.WaitForIndex2.Term1=4; Kuka.WaitForIndexName2.Term1=bDropOffOk; Kuka.WaitForTermNumbers=1; Kuka.WaitForOpNumbers=2; Kuka.WaitForCont=False
+;ENDFOLD
+WAIT FOR  ( $IN[4] )
+;ENDFOLD
+;FOLD OUT 3 'bDropOff' State=False  ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.logics.out.out; Kuka.Logics.Io=3; Kuka.Logics.IoName=bDropOff; Kuka.Logics.State=False; Kuka.Logics.Cont=False
+;ENDFOLD
+$OUT[3] = False
+;ENDFOLD
+;Go back to starting position
+;;FOLD SLIN P_app Vel=2 m/s CPDAT22 Tool[1] Base[0] ;%{PE}
+;;FOLD Parameters ;%{h}
+;;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_app; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT22; Kuka.VelocityPath=2; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;;ENDFOLD
+;SLIN XP_app WITH $VEL = SVEL_CP(2.0, , LCPDAT22), $TOOL = STOOL2(FP_app), $BASE = SBASE(FP_app.BASE_NO), $IPO_MODE = SIPO_MODE(FP_app.IPO_FRAME), $LOAD = SLOAD(FP_app.TOOL_NO), $ACC = SACC_CP(LCPDAT22), $ORI_TYPE = SORI_TYP(LCPDAT22), $APO = SAPO(LCPDAT22), $JERK = SJERK(LCPDAT22), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;;ENDFOLD
+;FOLD SLIN P_T1 CONT Vel=1 m/s CPDAT30 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_T1; Kuka.BlendingEnabled=True; Kuka.MoveDataName=CPDAT30; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_T1 WITH $VEL = SVEL_CP(1.0, , LCPDAT30), $TOOL = STOOL2(FP_T1), $BASE = SBASE(FP_T1.BASE_NO), $IPO_MODE = SIPO_MODE(FP_T1.IPO_FRAME), $LOAD = SLOAD(FP_T1.TOOL_NO), $ACC = SACC_CP(LCPDAT30), $ORI_TYPE = SORI_TYP(LCPDAT30), $APO = SAPO(LCPDAT30), $JERK = SJERK(LCPDAT30), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0) C_Spl
+;ENDFOLD
+;FOLD SLIN P_appnew Vel=1 m/s CPDAT27 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.spline; Kuka.IsGlobalPoint=False; Kuka.PointName=P_appnew; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT27; Kuka.VelocityPath=1; Kuka.VelocityFieldEnabled=True; Kuka.ColDetectFieldEnabled=True; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=SLIN
+;ENDFOLD
+SLIN XP_appnew WITH $VEL = SVEL_CP(1.0, , LCPDAT27), $TOOL = STOOL2(FP_appnew), $BASE = SBASE(FP_appnew.BASE_NO), $IPO_MODE = SIPO_MODE(FP_appnew.IPO_FRAME), $LOAD = SLOAD(FP_appnew.TOOL_NO), $ACC = SACC_CP(LCPDAT27), $ORI_TYPE = SORI_TYP(LCPDAT27), $APO = SAPO(LCPDAT27), $JERK = SJERK(LCPDAT27), $COLLMON_TOL_PRO[1] = USE_CM_PRO_VALUES(0)
+;ENDFOLD
+ENDLOOP
+END
+DEF LIN_APPROACH()
+
+INTERRUPT ON 1 ;Check for interrupt on $IN[1]
+;;FOLD LIN P_plate Vel=0.01 m/s CPDAT6 Tool[1] Base[0] ;%{PE}
+;;FOLD Parameters ;%{h}
+;;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.old; Kuka.IsGlobalPoint=False; Kuka.PointName=P_plate; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT6; Kuka.VelocityPath=0.01; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=LIN
+;;ENDFOLD
+;$BWDSTART = FALSE
+;LDAT_ACT = LCPDAT6
+;FDAT_ACT = FP_plate
+;BAS(#CP_PARAMS, 0.01)
+;SET_CD_PARAMS (0)
+;LIN XP_plate
+;;ENDFOLD
+;FOLD LIN P_platenew Vel=0.01 m/s CPDAT26 Tool[1] Base[0] ;%{PE}
+;FOLD Parameters ;%{h}
+;Params IlfProvider=kukaroboter.basistech.inlineforms.movement.old; Kuka.IsGlobalPoint=False; Kuka.PointName=P_platenew; Kuka.BlendingEnabled=False; Kuka.MoveDataName=CPDAT26; Kuka.VelocityPath=0.01; Kuka.CurrentCDSetIndex=0; Kuka.MovementParameterFieldEnabled=True; IlfCommand=LIN
+;ENDFOLD
+$BWDSTART = FALSE
+LDAT_ACT = LCPDAT26
+FDAT_ACT = FP_platenew
+BAS(#CP_PARAMS, 0.01)
+SET_CD_PARAMS (0)
+LIN XP_platenew
+;ENDFOLD
+INTERRUPT OFF 1 ;Turn of check for interrupt
+wait sec 0 ;RESUME interrupt starts from here
+
+END
+DEF Interrupt_prog()
+
+  BRAKE ;Stops robot
+  INTERRUPT OFF 1 ;Turns of interrupt 
+  RESUME ;Skips current line in main and runs next
+
+END
